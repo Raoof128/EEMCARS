@@ -1,0 +1,141 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: eemcars-postgres
+    environment:
+      POSTGRES_DB: eemcars
+      POSTGRES_USER: eemcars
+      POSTGRES_PASSWORD: eemcars123
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eemcars"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - eemcars-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: eemcars-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - eemcars-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: eemcars-backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://eemcars:eemcars123@postgres:5432/eemcars
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      SECRET_KEY: change-this-in-production-use-azure-key-vault
+      DEBUG: "False"
+      LOG_LEVEL: INFO
+      CORS_ORIGINS: '["http://localhost:3000","http://localhost:8000"]'
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend/app:/app/app
+      - reports_data:/tmp/eemcars/reports
+    networks:
+      - eemcars-network
+    restart: unless-stopped
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: eemcars-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - eemcars-network
+    restart: unless-stopped
+
+  # Celery Worker (for background tasks)
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: eemcars-celery-worker
+    command: celery -A app.core.celery worker --loglevel=info
+    environment:
+      DATABASE_URL: postgresql+asyncpg://eemcars:eemcars123@postgres:5432/eemcars
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend/app:/app/app
+      - ./ansible:/app/ansible
+    networks:
+      - eemcars-network
+    restart: unless-stopped
+
+  # Celery Beat (for scheduled tasks)
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: eemcars-celery-beat
+    command: celery -A app.core.celery beat --loglevel=info
+    environment:
+      DATABASE_URL: postgresql+asyncpg://eemcars:eemcars123@postgres:5432/eemcars
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - eemcars-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  reports_data:
+    driver: local
+
+networks:
+  eemcars-network:
+    driver: bridge

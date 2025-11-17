@@ -1,0 +1,27 @@
+---
+- name: Verify Multi-Factor Authentication Configuration
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Check Azure AD MFA status
+      uri:
+        url: "https://graph.microsoft.com/v1.0/reports/credentialUserRegistrationDetails"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ azure_access_token }}"
+        return_content: yes
+      register: mfa_status
+      when: azure_access_token is defined
+
+    - name: Report MFA enrollment status
+      debug:
+        msg: "MFA Status Retrieved - {{ mfa_status.json.value | length }} users checked"
+      when: mfa_status.json is defined
+
+    - name: Verify VPN MFA requirement
+      debug:
+        msg: "Manual verification required for VPN MFA configuration"
+
+    - name: Verify RDP MFA requirement
+      debug:
+        msg: "Manual verification required for RDP MFA configuration"

@@ -1,0 +1,33 @@
+---
+- name: Configure Application Control (AppLocker/Application Whitelisting)
+  hosts: windows
+  gather_facts: yes
+  tasks:
+    - name: Check if AppLocker is available
+      win_shell: Get-AppLockerPolicy -Effective
+      register: applocker_status
+      ignore_errors: yes
+
+    - name: Enable AppLocker service
+      win_service:
+        name: AppIDSvc
+        state: started
+        start_mode: auto
+
+    - name: Configure AppLocker default rules
+      win_shell: |
+        Set-AppLockerPolicy -XMLPolicy "{{ playbook_dir }}/../roles/applocker/files/default_policy.xml"
+      when: applocker_status is success
+
+    - name: Enable AppLocker logging
+      win_shell: |
+        wevtutil sl Microsoft-Windows-AppLocker/EXE and DLL /e:true
+        wevtutil sl Microsoft-Windows-AppLocker/MSI and Script /e:true
+
+    - name: Verify AppLocker is enforced
+      win_shell: Get-AppLockerPolicy -Effective | Select-Object -ExpandProperty RuleCollections
+      register: applocker_rules
+
+    - name: Report results
+      debug:
+        msg: "AppLocker configured with {{ applocker_rules.stdout_lines | length }} rule collections"

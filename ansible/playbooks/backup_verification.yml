@@ -1,0 +1,34 @@
+---
+- name: Verify Backup Configuration
+  hosts: all
+  gather_facts: yes
+  tasks:
+    - name: Check for backup agents (Windows)
+      win_service:
+        name: "{{ item }}"
+      register: backup_services
+      loop:
+        - MSSQLSERVER
+        - VSS
+        - wbengine  # Windows Backup
+      when: ansible_os_family == "Windows"
+      ignore_errors: yes
+
+    - name: Check backup schedule (Linux)
+      shell: |
+        crontab -l | grep -E 'backup|rsync|tar' || echo "No backup cron jobs found"
+      register: linux_backup_cron
+      when: ansible_os_family != "Windows"
+
+    - name: Check last backup timestamp
+      find:
+        paths: /backup
+        age: -7d
+        recurse: no
+      register: recent_backups
+      when: ansible_os_family != "Windows"
+
+    - name: Report backup status
+      debug:
+        msg: "Backup verification complete. Recent backups: {{ recent_backups.matched | default(0) }}"
+      when: ansible_os_family != "Windows"

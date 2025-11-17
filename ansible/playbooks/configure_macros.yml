@@ -1,0 +1,37 @@
+---
+- name: Configure Microsoft Office Macro Settings
+  hosts: windows
+  gather_facts: yes
+  tasks:
+    - name: Block macros from the Internet (Office 2016/2019/365)
+      win_regedit:
+        path: HKCU:\Software\Microsoft\Office\{{ item.version }}\{{ item.app }}\Security
+        name: VBAWarnings
+        data: 3
+        type: dword
+      loop:
+        - { version: '16.0', app: 'Word' }
+        - { version: '16.0', app: 'Excel' }
+        - { version: '16.0', app: 'PowerPoint' }
+        - { version: '16.0', app: 'Access' }
+        - { version: '16.0', app: 'Publisher' }
+
+    - name: Block macros from Internet zone
+      win_regedit:
+        path: HKCU:\Software\Microsoft\Office\{{ item.version }}\{{ item.app }}\Security
+        name: BlockContentExecutionFromInternet
+        data: 1
+        type: dword
+      loop:
+        - { version: '16.0', app: 'Word' }
+        - { version: '16.0', app: 'Excel' }
+        - { version: '16.0', app: 'PowerPoint' }
+
+    - name: Verify macro settings
+      win_shell: |
+        Get-ItemProperty -Path "HKCU:\Software\Microsoft\Office\16.0\*\Security" -Name VBAWarnings -ErrorAction SilentlyContinue
+      register: macro_settings
+
+    - name: Report results
+      debug:
+        msg: "Office macro settings configured successfully"

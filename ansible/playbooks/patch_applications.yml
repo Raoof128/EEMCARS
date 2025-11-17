@@ -1,0 +1,42 @@
+---
+- name: Check and Install Application Patches
+  hosts: all
+  gather_facts: yes
+  tasks:
+    - name: Update package cache (Debian/Ubuntu)
+      apt:
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Upgrade all packages (Debian/Ubuntu)
+      apt:
+        upgrade: dist
+        autoremove: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Update package cache (RedHat/CentOS)
+      yum:
+        update_cache: yes
+      when: ansible_os_family == "RedHat"
+
+    - name: Upgrade all packages (RedHat/CentOS)
+      yum:
+        name: "*"
+        state: latest
+      when: ansible_os_family == "RedHat"
+
+    - name: Check Windows updates
+      win_updates:
+        category_names:
+          - Application
+          - SecurityUpdates
+          - CriticalUpdates
+        state: installed
+        reboot: no
+      when: ansible_os_family == "Windows"
+      register: windows_updates
+
+    - name: Report patching results
+      debug:
+        msg: "Patching completed. Updated: {{ windows_updates.updates | default([]) | length }} packages"
+      when: ansible_os_family == "Windows"

@@ -1,0 +1,25 @@
+# Docker Compose override for development
+# This file is automatically loaded by docker-compose
+# and overrides settings in docker-compose.yml
+
+version: '3.8'
+
+services:
+  backend:
+    environment:
+      - DEBUG=True
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - ./backend/app:/app/app:ro
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    command: npm start
+
+  postgres:
+    ports:
+      - "5432:5432"  # Expose for local development tools
+
+  redis:
+    ports:
+      - "6379:6379"  # Expose for local development tools

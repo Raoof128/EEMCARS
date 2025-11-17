@@ -361,7 +361,7 @@ INSERT INTO maturity_requirements (control_id, maturity_level, requirement_text,
 ((SELECT id FROM controls WHERE control_id = 'E8-RB'), 2,
 'Backups are stored offline or online with multi-factor authentication and encrypted. Restoration is tested as part of disaster recovery exercises.',
 '{"checks": ["offline_backups", "backup_encryption", "mfa_backup_access", "dr_testing"]}'::jsonb),
-((SELECT id FROM controls WHERE control_id =='E8-RB'), 3,
+((SELECT id FROM controls WHERE control_id = 'E8-RB'), 3,
 'Backups are stored offline, online with immutability, or air-gapped. Full restoration is tested quarterly. Event logs for backup deletion are monitored.',
 '{"checks": ["immutable_backups", "quarterly_restore_test", "backup_monitoring", "ransomware_protection"]}'::jsonb);
 

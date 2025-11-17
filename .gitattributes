@@ -1,0 +1,87 @@
+# Git attributes for consistent line endings and file handling
+
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Source code
+*.py text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Configuration files
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.toml text eol=lf
+*.ini text eol=lf
+*.cfg text eol=lf
+
+# SQL and database
+*.sql text eol=lf
+
+# Documentation
+*.md text eol=lf
+*.txt text eol=lf
+*.rst text eol=lf
+
+# Templates
+*.html text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+
+# Windows scripts
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.zip binary
+*.tar binary
+*.gz binary
+
+# Archives
+*.7z binary
+*.jar binary
+*.rar binary
+*.zip binary
+*.tar.gz binary
+
+# Docker
+Dockerfile text eol=lf
+*.dockerignore text eol=lf
+
+# Terraform
+*.tf text eol=lf
+*.tfvars text eol=lf
+
+# Ansible
+*.ansible text eol=lf
+
+# Generated files
+*.min.js binary
+*.min.css binary
+
+# Export diff
+*.sql diff=sql
+*.py diff=python
+*.js diff=javascript
+
+# Linguist overrides for proper language detection
+*.sql linguist-detectable=true
+*.md linguist-detectable=true
+docs/* linguist-documentation
+*.min.js linguist-generated=true

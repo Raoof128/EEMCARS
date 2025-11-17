@@ -1,0 +1,35 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: eemcars-backend-pdb
+  namespace: eemcars
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: eemcars
+      component: backend
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: eemcars-frontend-pdb
+  namespace: eemcars
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: eemcars
+      component: frontend
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: eemcars-celery-worker-pdb
+  namespace: eemcars
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: eemcars
+      component: celery-worker

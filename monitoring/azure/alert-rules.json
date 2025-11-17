@@ -1,0 +1,206 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "resourceGroupName": {
+      "type": "string",
+      "defaultValue": "eemcars-production-rg"
+    },
+    "aksClusterName": {
+      "type": "string",
+      "defaultValue": "eemcars-production-aks"
+    },
+    "actionGroupId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the action group for alert notifications"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Insights/metricAlerts",
+      "apiVersion": "2018-03-01",
+      "name": "eemcars-high-cpu-alert",
+      "location": "australiaeast",
+      "properties": {
+        "description": "Alert when CPU usage exceeds 80%",
+        "severity": 2,
+        "enabled": true,
+        "scopes": [
+          "[resourceId('Microsoft.ContainerService/managedClusters', parameters('aksClusterName'))]"
+        ],
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "criteria": {
+          "allOf": [
+            {
+              "threshold": 80,
+              "name": "Metric1",
+              "metricNamespace": "Microsoft.ContainerService/managedClusters",
+              "metricName": "node_cpu_usage_percentage",
+              "operator": "GreaterThan",
+              "timeAggregation": "Average",
+              "criterionType": "StaticThresholdCriterion"
+            }
+          ],
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria"
+        },
+        "actions": [
+          {
+            "actionGroupId": "[parameters('actionGroupId')]"
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Insights/metricAlerts",
+      "apiVersion": "2018-03-01",
+      "name": "eemcars-high-memory-alert",
+      "location": "australiaeast",
+      "properties": {
+        "description": "Alert when memory usage exceeds 85%",
+        "severity": 2,
+        "enabled": true,
+        "scopes": [
+          "[resourceId('Microsoft.ContainerService/managedClusters', parameters('aksClusterName'))]"
+        ],
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "criteria": {
+          "allOf": [
+            {
+              "threshold": 85,
+              "name": "Metric1",
+              "metricNamespace": "Microsoft.ContainerService/managedClusters",
+              "metricName": "node_memory_working_set_percentage",
+              "operator": "GreaterThan",
+              "timeAggregation": "Average",
+              "criterionType": "StaticThresholdCriterion"
+            }
+          ],
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria"
+        },
+        "actions": [
+          {
+            "actionGroupId": "[parameters('actionGroupId')]"
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Insights/metricAlerts",
+      "apiVersion": "2018-03-01",
+      "name": "eemcars-pod-not-ready",
+      "location": "australiaeast",
+      "properties": {
+        "description": "Alert when pods are not in ready state",
+        "severity": 1,
+        "enabled": true,
+        "scopes": [
+          "[resourceId('Microsoft.ContainerService/managedClusters', parameters('aksClusterName'))]"
+        ],
+        "evaluationFrequency": "PT1M",
+        "windowSize": "PT5M",
+        "criteria": {
+          "allOf": [
+            {
+              "threshold": 1,
+              "name": "Metric1",
+              "metricNamespace": "Microsoft.ContainerService/managedClusters",
+              "metricName": "kube_pod_status_ready",
+              "dimensions": [
+                {
+                  "name": "namespace",
+                  "operator": "Include",
+                  "values": ["eemcars"]
+                }
+              ],
+              "operator": "LessThan",
+              "timeAggregation": "Average",
+              "criterionType": "StaticThresholdCriterion"
+            }
+          ],
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria"
+        },
+        "actions": [
+          {
+            "actionGroupId": "[parameters('actionGroupId')]"
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2021-08-01",
+      "name": "eemcars-application-errors",
+      "location": "australiaeast",
+      "properties": {
+        "description": "Alert on application errors from Application Insights",
+        "severity": 2,
+        "enabled": true,
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "scopes": [
+          "[resourceId('Microsoft.Insights/components', 'eemcars-appinsights')]"
+        ],
+        "criteria": {
+          "allOf": [
+            {
+              "query": "exceptions | where cloud_RoleName startswith 'eemcars' | summarize count() by bin(timestamp, 5m)",
+              "timeAggregation": "Count",
+              "dimensions": [],
+              "operator": "GreaterThan",
+              "threshold": 10,
+              "failingPeriods": {
+                "numberOfEvaluationPeriods": 1,
+                "minFailingPeriodsToAlert": 1
+              }
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": [
+            "[parameters('actionGroupId')]"
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2021-08-01",
+      "name": "eemcars-slow-requests",
+      "location": "australiaeast",
+      "properties": {
+        "description": "Alert on slow API requests",
+        "severity": 3,
+        "enabled": true,
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "scopes": [
+          "[resourceId('Microsoft.Insights/components', 'eemcars-appinsights')]"
+        ],
+        "criteria": {
+          "allOf": [
+            {
+              "query": "requests | where cloud_RoleName startswith 'eemcars-backend' | where duration > 2000 | summarize count() by bin(timestamp, 5m)",
+              "timeAggregation": "Count",
+              "dimensions": [],
+              "operator": "GreaterThan",
+              "threshold": 50,
+              "failingPeriods": {
+                "numberOfEvaluationPeriods": 2,
+                "minFailingPeriodsToAlert": 2
+              }
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": [
+            "[parameters('actionGroupId')]"
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,434 @@
+openapi: 3.0.3
+info:
+  title: EEMCARS API
+  description: |
+    Essential Eight Maturity Continuous Assessment & Remediation System API
+
+    This API provides endpoints for managing Essential Eight maturity assessments,
+    evidence collection, drift detection, and automated remediation for Australian
+    organizations following the ACSC Essential Eight framework.
+
+    ## Authentication
+    All endpoints (except `/auth/token`) require JWT authentication.
+    Include the token in the Authorization header: `Authorization: Bearer <token>`
+
+    ## Rate Limiting
+    - 100 requests per minute per user
+    - 1000 requests per hour per IP
+
+    ## Australian Data Sovereignty
+    All data is stored in Azure Australia East/Southeast regions.
+
+  version: 1.0.0
+  contact:
+    name: EEMCARS Support
+    email: support@eemcars.io
+    url: https://github.com/yourusername/eemcars
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Local development
+  - url: https://api.eemcars.io/api/v1
+    description: Production (Azure)
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+  - name: Controls
+    description: Essential Eight control definitions and management
+  - name: Evidence
+    description: Evidence collection and management
+  - name: Assessments
+    description: Assessment runs and results
+  - name: Remediation
+    description: Remediation tasks and execution
+  - name: Reports
+    description: Report generation and export
+  - name: Agents
+    description: Agent registration and heartbeats
+  - name: Dashboard
+    description: Dashboard summary and analytics
+
+paths:
+  /auth/token:
+    post:
+      summary: Obtain JWT token
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  example: admin
+                password:
+                  type: string
+                  format: password
+                  example: DemoUser123!
+              required:
+                - username
+                - password
+      responses:
+        '200':
+          description: Successful authentication
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  token_type:
+                    type: string
+                    example: bearer
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Invalid credentials
+
+  /auth/me:
+    get:
+      summary: Get current user
+      tags: [Authentication]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  /controls:
+    get:
+      summary: List all Essential Eight controls
+      tags: [Controls]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of controls
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  controls:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Control'
+                  total:
+                    type: integer
+
+  /controls/{control_id}:
+    get:
+      summary: Get specific control
+      tags: [Controls]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: control_id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: E8-AC
+      responses:
+        '200':
+          description: Control details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ControlDetail'
+
+  /controls/{control_id}/score:
+    post:
+      summary: Score a control for an asset
+      tags: [Controls]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: control_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                asset_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Scoring result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScoringResult'
+
+  /evidence:
+    get:
+      summary: List evidence
+      tags: [Evidence]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: asset_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: control_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: List of evidence
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  evidence:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Evidence'
+    post:
+      summary: Submit new evidence
+      tags: [Evidence]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvidenceCreate'
+      responses:
+        '201':
+          description: Evidence created
+
+  /assessments/run:
+    post:
+      summary: Trigger assessment run
+      tags: [Assessments]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssessmentRunCreate'
+      responses:
+        '202':
+          description: Assessment started
+
+  /assessments:
+    get:
+      summary: List assessment runs
+      tags: [Assessments]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List of assessment runs
+
+  /dashboard/summary:
+    get:
+      summary: Get dashboard summary
+      tags: [Dashboard]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardSummary'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [Admin, SecOps, Auditor, ExecViewer]
+        is_active:
+          type: boolean
+
+    Control:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        control_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        pillar:
+          type: string
+        acsc_reference:
+          type: string
+
+    ControlDetail:
+      allOf:
+        - $ref: '#/components/schemas/Control'
+        - type: object
+          properties:
+            requirements:
+              type: array
+              items:
+                $ref: '#/components/schemas/MaturityRequirement'
+
+    MaturityRequirement:
+      type: object
+      properties:
+        maturity_level:
+          type: integer
+          minimum: 0
+          maximum: 3
+        requirement_text:
+          type: string
+        validation_criteria:
+          type: object
+        remediation_guidance:
+          type: string
+
+    Evidence:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        asset_id:
+          type: string
+          format: uuid
+        control_id:
+          type: string
+          format: uuid
+        evidence_type:
+          type: string
+        evidence_hash:
+          type: string
+        collected_at:
+          type: string
+          format: date-time
+        is_valid:
+          type: boolean
+        collection_method:
+          type: string
+          enum: [Agent, API, Manual, Integration]
+
+    EvidenceCreate:
+      type: object
+      required:
+        - asset_id
+        - control_id
+        - evidence_type
+        - evidence_data
+      properties:
+        asset_id:
+          type: string
+          format: uuid
+        control_id:
+          type: string
+          format: uuid
+        evidence_type:
+          type: string
+        evidence_data:
+          type: object
+        collection_method:
+          type: string
+          default: Manual
+
+    AssessmentRunCreate:
+      type: object
+      properties:
+        run_type:
+          type: string
+          enum: [Full, Incremental, OnDemand, Scheduled]
+          default: OnDemand
+        asset_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        control_ids:
+          type: array
+          items:
+            type: string
+
+    ScoringResult:
+      type: object
+      properties:
+        control_id:
+          type: string
+          format: uuid
+        control_code:
+          type: string
+        maturity_level:
+          type: integer
+        score:
+          type: number
+        findings:
+          type: object
+
+    DashboardSummary:
+      type: object
+      properties:
+        overall_maturity_level:
+          type: integer
+        average_score:
+          type: number
+        total_assets:
+          type: integer
+        drift_events:
+          type: integer
+        open_remediation_tasks:
+          type: integer
+        pillars:
+          type: array
+          items:
+            type: object

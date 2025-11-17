@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or Discussion
+    url: https://github.com/yourusername/eemcars/discussions
+    about: Ask questions or discuss ideas with the community
+  - name: Documentation
+    url: https://github.com/yourusername/eemcars/tree/main/docs
+    about: Read the comprehensive documentation
+  - name: Security Vulnerability
+    url: https://github.com/yourusername/eemcars/security/advisories/new
+    about: Report a security vulnerability privately

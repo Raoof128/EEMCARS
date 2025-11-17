@@ -1,0 +1,134 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: eemcars-backend-policy
+  namespace: eemcars
+spec:
+  podSelector:
+    matchLabels:
+      app: eemcars
+      component: backend
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow traffic from frontend and ingress
+  - from:
+    - podSelector:
+        matchLabels:
+          app: eemcars
+          component: frontend
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8000
+  egress:
+  # Allow DNS
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    ports:
+    - protocol: UDP
+      port: 53
+  # Allow PostgreSQL
+  - to:
+    - podSelector: {}
+    ports:
+    - protocol: TCP
+      port: 5432
+  # Allow Redis
+  - to:
+    - podSelector: {}
+    ports:
+    - protocol: TCP
+      port: 6379
+  # Allow external HTTPS for Azure services
+  - to:
+    - podSelector: {}
+    ports:
+    - protocol: TCP
+      port: 443
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: eemcars-frontend-policy
+  namespace: eemcars
+spec:
+  podSelector:
+    matchLabels:
+      app: eemcars
+      component: frontend
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow traffic from ingress
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 80
+  egress:
+  # Allow DNS
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    ports:
+    - protocol: UDP
+      port: 53
+  # Allow backend API calls
+  - to:
+    - podSelector:
+        matchLabels:
+          app: eemcars
+          component: backend
+    ports:
+    - protocol: TCP
+      port: 8000
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: eemcars-celery-policy
+  namespace: eemcars
+spec:
+  podSelector:
+    matchLabels:
+      app: eemcars
+      component: celery-worker
+  policyTypes:
+  - Egress
+  egress:
+  # Allow DNS
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    ports:
+    - protocol: UDP
+      port: 53
+  # Allow Redis
+  - to:
+    - podSelector: {}
+    ports:
+    - protocol: TCP
+      port: 6379
+  # Allow PostgreSQL
+  - to:
+    - podSelector: {}
+    ports:
+    - protocol: TCP
+      port: 5432
+  # Allow external HTTPS for Azure services
+  - to:
+    - podSelector: {}
+    ports:
+    - protocol: TCP
+      port: 443

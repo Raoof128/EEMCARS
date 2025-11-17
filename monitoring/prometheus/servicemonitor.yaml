@@ -1,0 +1,56 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: eemcars-backend-monitor
+  namespace: eemcars
+  labels:
+    app: eemcars
+    component: backend
+spec:
+  selector:
+    matchLabels:
+      app: eemcars
+      component: backend
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: eemcars-frontend-monitor
+  namespace: eemcars
+  labels:
+    app: eemcars
+    component: frontend
+spec:
+  selector:
+    matchLabels:
+      app: eemcars
+      component: frontend
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: eemcars-celery-monitor
+  namespace: eemcars
+  labels:
+    app: eemcars
+    component: celery-worker
+spec:
+  selector:
+    matchLabels:
+      app: eemcars
+      component: celery-worker
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s

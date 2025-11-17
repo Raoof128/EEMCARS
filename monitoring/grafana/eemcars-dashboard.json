@@ -1,0 +1,214 @@
+{
+  "dashboard": {
+    "title": "EEMCARS - Essential Eight Maturity Overview",
+    "tags": ["eemcars", "essential-eight", "security"],
+    "timezone": "Australia/Sydney",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Essential Eight Maturity Levels",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "essential_eight_maturity_level",
+            "legendFormat": "{{ pillar }}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "options": {
+          "min": 0,
+          "max": 3,
+          "thresholds": [
+            {"value": 0, "color": "red"},
+            {"value": 1, "color": "orange"},
+            {"value": 2, "color": "yellow"},
+            {"value": 3, "color": "green"}
+          ]
+        }
+      },
+      {
+        "id": 2,
+        "title": "Overall Compliance Score",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "avg(essential_eight_maturity_level) / 3 * 100",
+            "legendFormat": "Compliance %"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+        "options": {
+          "unit": "percent",
+          "thresholds": [
+            {"value": 0, "color": "red"},
+            {"value": 33, "color": "orange"},
+            {"value": 66, "color": "yellow"},
+            {"value": 90, "color": "green"}
+          ]
+        }
+      },
+      {
+        "id": 3,
+        "title": "Assessment Runs (24h)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(increase(assessment_runs_total[24h]))",
+            "legendFormat": "Total Runs"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0}
+      },
+      {
+        "id": 4,
+        "title": "Assessment Success Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(assessment_runs_total{status=\"completed\"}[5m]) / rate(assessment_runs_total[5m]) * 100",
+            "legendFormat": "Success Rate %"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4}
+      },
+      {
+        "id": 5,
+        "title": "Maturity Trend (30d)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "essential_eight_maturity_level",
+            "legendFormat": "{{ pillar }}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8},
+        "options": {
+          "legend": {"displayMode": "table", "placement": "right"}
+        }
+      },
+      {
+        "id": 6,
+        "title": "API Request Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{job=\"eemcars-backend\"}[5m])",
+            "legendFormat": "{{ method }} {{ path }}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+      },
+      {
+        "id": 7,
+        "title": "API Response Time (p95)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job=\"eemcars-backend\"}[5m]))",
+            "legendFormat": "{{ path }}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+        "yAxes": [{"format": "s"}]
+      },
+      {
+        "id": 8,
+        "title": "Error Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{job=\"eemcars-backend\",status=~\"5..\"}[5m])",
+            "legendFormat": "{{ status }} {{ path }}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {"params": [0.05], "type": "gt"},
+              "query": {"params": ["A", "5m", "now"]}
+            }
+          ]
+        }
+      },
+      {
+        "id": 9,
+        "title": "Celery Task Queue Length",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "celery_queue_length",
+            "legendFormat": "{{ queue }}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24}
+      },
+      {
+        "id": 10,
+        "title": "Database Connections",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sqlalchemy_pool_connections",
+            "legendFormat": "{{ state }}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 32}
+      },
+      {
+        "id": 11,
+        "title": "Pod Memory Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "container_memory_working_set_bytes{namespace=\"eemcars\",container!=\"\"} / 1024 / 1024",
+            "legendFormat": "{{ pod }}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 32},
+        "yAxes": [{"format": "decmbytes"}]
+      },
+      {
+        "id": 12,
+        "title": "Drift Events (24h)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(increase(drift_events_total[24h]))",
+            "legendFormat": "Total Drift Events"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 40}
+      },
+      {
+        "id": 13,
+        "title": "Remediation Tasks Status",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "sum by(status) (remediation_tasks)",
+            "legendFormat": "{{ status }}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 6, "y": 40}
+      },
+      {
+        "id": 14,
+        "title": "Evidence Collection Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(evidence_collected_total[5m])",
+            "legendFormat": "{{ source }}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 18, "y": 40}
+      }
+    ],
+    "refresh": "30s",
+    "time": {"from": "now-24h", "to": "now"},
+    "timepicker": {
+      "refresh_intervals": ["30s", "1m", "5m", "15m", "30m", "1h"]
+    }
+  }
+}

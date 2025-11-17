@@ -1,0 +1,41 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: eemcars
+
+bases:
+  - ../../base
+
+commonLabels:
+  environment: production
+
+patches:
+  - target:
+      kind: Deployment
+    patch: |-
+      - op: add
+        path: /spec/template/spec/affinity
+        value:
+          podAntiAffinity:
+            preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                    - eemcars
+                topologyKey: kubernetes.io/hostname
+
+configMapGenerator:
+  - name: eemcars-config
+    behavior: merge
+    literals:
+      - log-level=INFO
+
+images:
+  - name: eemcarsprodacr.azurecr.io/eemcars-backend
+    newTag: v1.0.0
+  - name: eemcarsprodacr.azurecr.io/eemcars-frontend
+    newTag: v1.0.0

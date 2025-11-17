@@ -1,0 +1,146 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: eemcars-alerts
+  namespace: eemcars
+  labels:
+    app: eemcars
+    prometheus: kube-prometheus
+spec:
+  groups:
+  - name: eemcars.backend.rules
+    interval: 30s
+    rules:
+    # High Error Rate
+    - alert: HighErrorRate
+      expr: |
+        rate(http_requests_total{job="eemcars-backend",status=~"5.."}[5m])
+        /
+        rate(http_requests_total{job="eemcars-backend"}[5m]) > 0.05
+      for: 5m
+      labels:
+        severity: warning
+        component: backend
+      annotations:
+        summary: "High error rate on backend"
+        description: "Backend error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+
+    # API Response Time
+    - alert: HighAPILatency
+      expr: |
+        histogram_quantile(0.95,
+          rate(http_request_duration_seconds_bucket{job="eemcars-backend"}[5m])
+        ) > 2
+      for: 10m
+      labels:
+        severity: warning
+        component: backend
+      annotations:
+        summary: "High API latency detected"
+        description: "95th percentile latency is {{ $value }}s (threshold: 2s)"
+
+    # Database Connection Pool
+    - alert: DatabaseConnectionPoolExhausted
+      expr: |
+        sqlalchemy_pool_connections{state="in_use"}
+        /
+        sqlalchemy_pool_size > 0.8
+      for: 5m
+      labels:
+        severity: critical
+        component: database
+      annotations:
+        summary: "Database connection pool near exhaustion"
+        description: "{{ $value | humanizePercentage }} of database connections in use"
+
+    # Celery Queue Backlog
+    - alert: CeleryQueueBacklog
+      expr: celery_queue_length > 1000
+      for: 10m
+      labels:
+        severity: warning
+        component: celery
+      annotations:
+        summary: "Celery queue backlog detected"
+        description: "{{ $value }} tasks queued (threshold: 1000)"
+
+    # Pod Memory Usage
+    - alert: HighMemoryUsage
+      expr: |
+        container_memory_working_set_bytes{namespace="eemcars",container!=""}
+        /
+        container_spec_memory_limit_bytes{namespace="eemcars",container!=""} > 0.9
+      for: 5m
+      labels:
+        severity: warning
+        component: infrastructure
+      annotations:
+        summary: "High memory usage on {{ $labels.pod }}"
+        description: "Memory usage is {{ $value | humanizePercentage }}"
+
+    # Pod CPU Usage
+    - alert: HighCPUUsage
+      expr: |
+        rate(container_cpu_usage_seconds_total{namespace="eemcars",container!=""}[5m])
+        /
+        container_spec_cpu_quota{namespace="eemcars",container!=""} > 0.8
+      for: 10m
+      labels:
+        severity: warning
+        component: infrastructure
+      annotations:
+        summary: "High CPU usage on {{ $labels.pod }}"
+        description: "CPU usage is {{ $value | humanizePercentage }}"
+
+    # Assessment Run Failures
+    - alert: AssessmentRunFailures
+      expr: |
+        rate(assessment_runs_total{status="failed"}[1h])
+        /
+        rate(assessment_runs_total[1h]) > 0.1
+      for: 30m
+      labels:
+        severity: warning
+        component: assessment
+      annotations:
+        summary: "High assessment run failure rate"
+        description: "{{ $value | humanizePercentage }} of assessments failing"
+
+    # Essential Eight Maturity Degradation
+    - alert: MaturityLevelDegradation
+      expr: |
+        (essential_eight_maturity_level - essential_eight_maturity_level offset 24h) < -1
+      for: 1h
+      labels:
+        severity: critical
+        component: assessment
+      annotations:
+        summary: "Essential Eight maturity level decreased"
+        description: "Maturity level for {{ $labels.pillar }} decreased by {{ $value }}"
+
+  - name: eemcars.availability.rules
+    interval: 30s
+    rules:
+    # Pod Availability
+    - alert: PodNotReady
+      expr: |
+        kube_pod_status_phase{namespace="eemcars",phase!="Running"} == 1
+      for: 5m
+      labels:
+        severity: critical
+        component: infrastructure
+      annotations:
+        summary: "Pod {{ $labels.pod }} not ready"
+        description: "Pod is in {{ $labels.phase }} phase"
+
+    # Service Endpoint Availability
+    - alert: ServiceEndpointDown
+      expr: |
+        kube_endpoint_address_available{namespace="eemcars"} == 0
+      for: 5m
+      labels:
+        severity: critical
+        component: infrastructure
+      annotations:
+        summary: "No endpoints available for service {{ $labels.service }}"
+        description: "Service has no available endpoints"

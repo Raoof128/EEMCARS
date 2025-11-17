@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: eemcars-config
+  namespace: eemcars
+data:
+  redis-url: "redis://eemcars-production-redis:6379/0"
+  celery-broker-url: "redis://eemcars-production-redis:6379/1"
+  celery-result-backend: "redis://eemcars-production-redis:6379/2"
+  api-url: "https://api.eemcars.io/api/v1"
+  keyvault-url: "https://eemcars-production-kv.vault.azure.net/"
+  log-level: "INFO"
+  azure-region: "australiaeast"

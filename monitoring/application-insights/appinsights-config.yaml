@@ -1,0 +1,86 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: appinsights-config
+  namespace: eemcars
+data:
+  applicationinsights.json: |
+    {
+      "connectionString": "${APPLICATIONINSIGHTS_CONNECTION_STRING}",
+      "role": {
+        "name": "eemcars",
+        "instance": "${HOSTNAME}"
+      },
+      "sampling": {
+        "enabled": true,
+        "percentage": 100,
+        "maxTelemetryItemsPerSecond": 20,
+        "excludedTypes": "Request;Exception",
+        "includedTypes": "PageView;Trace"
+      },
+      "enableAutoCollectRequests": true,
+      "enableAutoCollectPerformance": true,
+      "enableAutoCollectExceptions": true,
+      "enableAutoCollectDependencies": true,
+      "enableAutoCollectConsole": true,
+      "enableUseDiskRetryCaching": true,
+      "enableAutoDependencyCorrelation": true,
+      "distributedTracingMode": "AI_AND_W3C",
+      "enableAutoCollectHeartbeat": true,
+      "heartbeatInterval": 900000,
+      "disableAppInsights": false,
+      "customProperties": {
+        "application": "eemcars",
+        "environment": "production",
+        "region": "australiaeast",
+        "compliance_framework": "essential_eight",
+        "data_classification": "protected"
+      },
+      "instrumentationKey": "${APPINSIGHTS_INSTRUMENTATIONKEY}"
+    }
+---
+# Python OpenCensus configuration for backend
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opencensus-config
+  namespace: eemcars
+data:
+  opencensus.yaml: |
+    exporters:
+      azuremonitor:
+        instrumentation_key: ${APPINSIGHTS_INSTRUMENTATIONKEY}
+        connection_string: ${APPLICATIONINSIGHTS_CONNECTION_STRING}
+        enable_local_storage: true
+        storage_path: /tmp/opencensus
+
+    samplers:
+      probability:
+        probability: 1.0
+
+    trace:
+      propagation: tracecontext
+
+    stats:
+      enabled: true
+      export_interval: 60
+
+    integrations:
+      - type: django
+        trace_all_requests: true
+        sample_rate: 1.0
+      - type: fastapi
+        trace_all_requests: true
+        sample_rate: 1.0
+      - type: postgresql
+        trace_params: true
+      - type: redis
+        trace_params: false
+      - type: requests
+        trace_params: false
+
+    custom_dimensions:
+      application: eemcars
+      component: backend
+      environment: production
+      compliance: essential_eight
